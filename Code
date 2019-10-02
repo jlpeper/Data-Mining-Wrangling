@@ -1,0 +1,67 @@
+import re
+import pandas as pd
+import quandl
+from quandl.errors.quandl_error import NotFoundError
+
+# Insert your provate quandl key below:
+private_quandl_key = "Insert_key_here"
+quandl.ApiConfig.api_key = private_quandl_key
+
+
+
+# Part 1: The State, County_name, and Area_Code of all counties in the dataset
+#         are extracted (using regular expressions) from the available County Code mapping file.
+#         This data is written into a workable dataframe that serves as the template for the rest of the data mining.
+
+# Import county code data from file (County_Code_Data.txt). Read lines of file into a list (county_code_raw).
+county_code_raw = []
+with open('County_Code_Data.txt', 'r') as f:
+    county_code_raw  = f.readlines()
+    
+# Using a regular expression, identify and capture the 3 desired data of each county (State, Code, County_Name).
+# Store this data into a workable dataframe  
+county_code_clean = []
+regex = re.compile("(.*), (\w\w)[|](\d*)")
+for each in county_code_raw[1:]:
+    m = regex.match(each)
+    if m:
+        county_code_clean.append([int(m.group(3)), m.group(2), m.group(1)])
+    else:
+        print(each)
+county_df = pd.DataFrame(county_code_clean, columns = ["Code","State", "County"])
+
+
+
+# Part 2: The Zillow Home Value Index of condos on January 2013 and 2018 for each available county is retrieved
+#         from quandl. The resulting datafame is joined (on the common "Code" index) with the dataframe (step 1) containing State
+#         and County_name information.
+
+# Use a for loop to retrieve data from quandl, specifically in January of 2018.
+# A try/expect block is used within the for loop to skip counties which have no available data.
+df2018_compiled = pd.DataFrame(columns=["Value", "Code"])
+for row in county_df.itertuples():
+    code = row.Code
+    try:
+        df2018 = quandl.get("ZILLOW/C"+str(code)+"_ZHVICO", start_date='2018-01-01', end_date ='2018-02-01')
+    except (SyntaxError, NotFoundError):
+        continue 
+    else:
+        df2018['Code'] = code
+        df2018_compiled = df2018_compiled.append(df2018)
+# In the same manner, retrieve data from January 2013.       
+df2013_compiled = pd.DataFrame(columns=["Value", "Code"])
+for each in county_code_clean:
+    code = each[0]
+    try:
+        df2013 = quandl.get("ZILLOW/C"+str(code)+"_ZHVICO", start_date='2013-01-01', end_date ='2013-02-01')
+    except (SyntaxError, NotFoundError):
+        continue 
+    else:
+        df2013['Code'] = code
+        df2013_compiled = df2013_compiled.append(df2013)
+ 
+# Join the three resulting dataframes:
+df2013_compiled = df2013_compiled.rename(columns= {"Value": "Value_2013", "Code": "Code"})
+df2018_compiled = df2018_compiled.rename(columns= {"Value": "Value_2018", "Code": "Code"})
+df2018_13 = df2018_compiled.set_index('Code').join(df2013_compiled.set_index('Code'))
+county_values_df = county_df.set_index('Code').join(df2018_13)
