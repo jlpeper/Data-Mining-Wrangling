@@ -1,7 +1,10 @@
 # Data-Mining-Wrangling
 Language: Python
+
 Packages: Quandl, Pandas, Regular Expressions, Pickle
+
 Dataset: Zillow Real Estate Research available from the Quandl API (https://www.quandl.com/data/ZILLOW-Zillow-Real-Estate-Research/usage/quickstart/python
+
 
 The Zillow dataset contains over 1,880,000 time-series tracking over 100 real estate indicators starting in 1969.
 
